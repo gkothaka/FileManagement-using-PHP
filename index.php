@@ -10,31 +10,88 @@ $servername = "localhost";
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://ajax.googleapis.com/ajax/libs/jquery/3.1.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.6/css/bootstrap.min.css" />
+    <script src="https://maxcdn.bootstrapcdn.com/bootstrap/3.3.7/js/bootstrap.min.js"></script>
+    <script>
+$(document).ready(function(){
+ $('.action').change(function(){
+  if($(this).val() != '')
+  {
+   var action = $(this).attr("id");
+   var query = $(this).val();
+   var result = '';
+   if(action == "Subject")
+   {
+    result = 'LabName';
+   }
+      $.ajax({
+    url:"fetcher.php",
+    method:"POST",
+    data:{action:action, query:query},
+    success:function(data){
+     $('#'+result).html(data);
+    }
+   })
+  }
+ });
+});
+</script>
+<script>
+$(document).ready(function(){
+ $('.action').change(function(){
+  if($(this).val() != '')
+  {
+   var action = $(this).attr("id");
+   var query = $(this).val();
+   var result = '';
+   if(action == "DSubject")
+   {
+    result = 'DLabName';
+   }
+   else
+   {
+    result = 'DFileName';
+   }
+   $.ajax({
+    url:"fetch.php",
+    method:"POST",
+    data:{action:action, query:query},
+    success:function(data){
+     $('#'+result).html(data);
+    }
+   })
+  }
+ });
+});
+</script>
+
     <title>Document</title>
 </head>
 <body>
-    <div>
+    
+    <div class="container" style="width:600px;">
     <?php
     if(isset($_POST['AddLab']))
     {
-    $subject =$_POST["subject"];
+    $subject =$_POST["Subject"];
     $LabName = $_POST["LabName"];
     $Description = $_POST["Description"];
     $LabInstructor = $_POST["LabInstructor"];
     # Inserting a new record into LabDetails table
-    $sql = "Insert into LabDetails (subject, LabName, Description, LabInstructor) values ('$subject','$LabName','$Description','$LabInstructor')";
+    $sql = "Insert into labdetails (Subject, LabName, Description, LabInstructor) values ('$subject','$LabName','$Description','$LabInstructor')";
     if(mysqli_query($conn,$sql))
     {
     echo "Lab Added successfully! you may upload a document";
     }else{
-    echo "There was an error creating a new lab";
+    echo "There was an error creating a new lab (or) the lab you are trying to create is already present!";
     }
     }
     ?>
-    <h1>Add NEW LAB </h1>
-    <form  method="post" enctype="multipart/form-data">
+    <h1 align="center">Add NEW LAB </h1>
+    <form  method="post"  enctype="multipart/form-data">
     <label>Subject</label>
-    <input type="text" name="subject" placeholder="Java/PHP"><br><br>
+    <input type="text" name="Subject" placeholder="Java/PHP"><br><br>
     <label>LAB_NAME</label>
     <input type="text" name="LabName" placeholder="DataTypes/Operations"><br><br>
     <label>Description</label>
@@ -45,8 +102,9 @@ $servername = "localhost";
     </form>
     </div>
 
+<!-- uploading browsing document -->
 
-    <div>
+    <div class="container" style="width:600px;">
     <?php
     if(isset($_POST['UploadLab']))
     {
@@ -64,7 +122,7 @@ $servername = "localhost";
         if($fileError === 0)
         {
             if ($fileSize <1000000){
-                $Usubject =$_POST["subject"];
+                $Usubject =$_POST["Subject"];
                 $ULabName = $_POST["LabName"];
                 $UType = $_POST['Type'];
                 $UfileNameNew = $Usubject.$ULabName.$fileName.uniqid('',true).".".$fileActualExt;
@@ -92,33 +150,29 @@ $servername = "localhost";
         }
 }
 ?>
-<?php
-$sql = "select distinct(subject) from LabDetails order by subject";
-$sql1 = "select distinct(LabName) from LabDetails order by LabName";
-    $result = mysqli_query($conn,$sql);
-    $result1 = mysqli_query($conn,$sql1);
+<h2 align="center">Upload documents</h2><br /><br />
+  <?php
+//index.php
+$Subject = '';
+$query = "SELECT Subject FROM labdetails GROUP BY Subject ORDER BY Subject ASC";
+$result = mysqli_query($conn, $query);
+while($row = mysqli_fetch_array($result))
+{
+ $Subject .= '<option value="'.$row["Subject"].'">'.$row["Subject"].'</option>';
+}
 ?>
-    
-    <h1>Upload a Document</h1>
-
     <form method="post" enctype="multipart/form-data">
     <label>Subject</label>
-    <select name="subject">
-    <?php while($rows = $result->fetch_assoc())
-    {
-        $subject = $rows['subject'];
-        echo "<option>$subject</option>";
-    }
-    ?>
-    </select><br><br>
+     <select name="Subject" id="Subject" class="form-control action">
+    <option value="">Select Subject</option>
+    <?php echo $Subject; ?>
+   </select>
+   <br />
     <label>LabName</label>
-    <select name="LabName">
-    <?php while($rows = $result1->fetch_assoc())
-    {
-        $LabName = $rows['LabName'];
-        echo "<option>$LabName</option>";
-    }
-    ?></select><br><br>
+   <select name="LabName" id="LabName" class="form-control action">
+    <option value="">Select LabName</option>
+   </select>
+   <br />
     <label>Type</label>
     <select name="Type">
     <option>QuestionSheet</option>
@@ -130,14 +184,17 @@ $sql1 = "select distinct(LabName) from LabDetails order by LabName";
     </div>
 
 
-<div>
+<!-- Retrieving  document -->
+
+
+<div class="container" style="width:600px;">
     <?php
     if(isset($_POST['RetrieveLab2']))
     {
-        $Rsubject=$_POST["subject"];
-        $RLabName=$_POST["LabName"];
-        $file ='uploads/'.$_POST["file"];
-        $filename = $_POST["file"];
+        $Rsubject=$_POST["DSubject"];
+        $RLabName=$_POST["DLabName"];
+        $file ='uploads/'.$_POST["DFileName"];
+        $filename = $_POST["DFileName"];
         header('Content-type: application/pdf');
         header('Content-Disposition: inline; filename="'.$filename.'"');
         header('Content-Transfer-Encoding:binary');
@@ -146,44 +203,36 @@ $sql1 = "select distinct(LabName) from LabDetails order by LabName";
     }
 ?>
 <?php
-$sql = "select distinct(subject) from DocDetails order by subject";
-$sql1 = "select distinct(LabName) from DocDetails order by LabName";
-$sql2 = "select distinct(FileName) from DocDetails order by subject;";
-    $result = mysqli_query($conn,$sql);
-    $result1 = mysqli_query($conn,$sql1);
-    $result2 = mysqli_query($conn,$sql2);
+//index.php
+$Subject = '';
+$query = "SELECT Subject FROM docdetails GROUP BY Subject ORDER BY Subject ASC";
+$result = mysqli_query($conn, $query);
+while($row = mysqli_fetch_array($result))
+{
+ $Subject .= '<option value="'.$row["Subject"].'">'.$row["Subject"].'</option>';
+}
 ?>
-    
-    <h1>Upload a Document</h1>
 
+ <h2 align="center">Retrieve a Document</h2><br /><br />
     <form method="post" enctype="multipart/form-data">
     <label>Subject</label>
-    <select name="subject">
-    <?php while($rows = $result->fetch_assoc())
-    {
-        $subject = $rows['subject'];
-        echo "<option>$subject</option>";
-    }
-    ?>
-    </select><br><br>
+    <select name="DSubject" id="DSubject" class="form-control action">
+    <option value="">Select Subject</option>
+    <?php echo $Subject; ?>
+   </select>
+   <br />
     <label>LabName</label>
-    <select name="LabName">
-    <?php while($rows = $result1->fetch_assoc())
-    {
-        $LabName = $rows['LabName'];
-        echo "<option>$LabName</option>";
-    }
-    ?></select><br><br>
+    <select name="DLabName" id="DLabName" class="form-control action">
+    <option value="">Select LabName</option>
+   </select>
+   <br />
     <label>FileName</label>
-    <select name="file">
-    <?php while($rows = $result2->fetch_assoc())
-    {
-        $FileName = $rows['FileName'];
-        echo "<option>$FileName</option>";
-    }
-    ?>   </select><br><br>
+    <select name="DFileName" id="DFileName" class="form-control">
+    <option value="">Select FileName</option>
+   </select><br><br>
     <input type="submit" name="RetrieveLab2">
     </form>
     </div>
 </body>
 </html>
+
